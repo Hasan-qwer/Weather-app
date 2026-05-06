@@ -10,6 +10,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
   adapter: PrismaAdapter(db),
   session: { strategy: 'jwt' },
+  trustHost: true,
+  logger: {
+    error: (e) => console.error('[AUTH ERROR]', e),
+    warn: (code) => console.warn('[AUTH WARN]', code),
+  },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
