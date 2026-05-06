@@ -65,14 +65,21 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogle = async () => {
+  const handleGoogle = () => {
     setGoogleLoading(true);
-    try {
-      await signIn('google', { callbackUrl: '/dashboard', redirect: true });
-    } catch {
-      setGoogleLoading(false);
-      toast.error('Could not start Google sign-in. Please try again.');
+    // If NEXT_PUBLIC_APP_URL is set and we're on a different domain (e.g. a
+    // Vercel preview URL), redirect to the canonical domain first so that the
+    // PKCE cookie and the OAuth callback land on the same hostname.
+    const canonical = process.env.NEXT_PUBLIC_APP_URL;
+    if (canonical && typeof window !== 'undefined') {
+      const currentHost = window.location.hostname;
+      const canonicalHost = new URL(canonical).hostname;
+      if (currentHost !== canonicalHost) {
+        window.location.href = `${canonical}/login`;
+        return;
+      }
     }
+    window.location.href = '/api/auth/signin/google';
   };
 
   const fieldClass =
