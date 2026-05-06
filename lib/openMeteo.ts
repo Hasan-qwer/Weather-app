@@ -12,6 +12,9 @@ export interface WeatherData {
     weather_code: number;
     is_day: number;
     precipitation: number;
+    surface_pressure: number;
+    visibility: number;
+    uv_index: number;
   };
   hourly: {
     time: string[];
@@ -64,6 +67,9 @@ export async function fetchWeather(lat: number, lng: number): Promise<WeatherDat
       'weather_code',
       'is_day',
       'precipitation',
+      'surface_pressure',
+      'visibility',
+      'uv_index',
     ].join(','),
     hourly: ['temperature_2m', 'precipitation_probability', 'weather_code'].join(','),
     forecast_days: '1',

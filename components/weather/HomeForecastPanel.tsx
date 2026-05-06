@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useRef, useState, useEffect } from 'react';
+import { motion, AnimatePresence, useDragControls } from 'framer-motion';
 import { MapPin } from 'lucide-react';
 import { useWeather } from '@/lib/weatherContext';
 import { useLocation } from '@/lib/locationContext';
@@ -162,40 +162,24 @@ export default function HomeForecastPanel() {
   const { daily, selectedDay, setSelectedDay, loading } = useWeather();
   const [width, setWidth] = useState(320);
   const widthRef = useRef(320);
-  const resizeHandleRef = useRef<HTMLDivElement>(null);
+  const dragControls = useDragControls();
 
-  // Keep widthRef in sync so the native listener always sees the latest value.
   useEffect(() => { widthRef.current = width; }, [width]);
 
-  // Attach a native pointerdown listener directly to the resize handle.
-  // React synthetic events (onPointerDown) run from the root and fire AFTER
-  // Framer Motion's native bubble listener on the draggable parent — so they
-  // can't stop it. A listener added here fires at the element level, before
-  // the event bubbles to Framer Motion.
-  useEffect(() => {
-    const el = resizeHandleRef.current;
-    if (!el) return;
-    const onDown = (e: PointerEvent) => {
-      e.stopPropagation(); // Prevents bubble to Framer Motion on motion.aside
-      e.preventDefault();
-      const startX = e.clientX;
-      const startW = widthRef.current;
-      let active = true;
-      const onMove = (ev: PointerEvent) => {
-        if (!active) return;
-        setWidth(Math.min(480, Math.max(240, startW + ev.clientX - startX)));
-      };
-      const onUp = () => {
-        active = false;
-        window.removeEventListener('pointermove', onMove);
-        window.removeEventListener('pointerup', onUp);
-      };
-      window.addEventListener('pointermove', onMove);
-      window.addEventListener('pointerup', onUp);
+  const startResize = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = widthRef.current;
+    const onMove = (ev: PointerEvent) => {
+      setWidth(Math.min(480, Math.max(240, startW + ev.clientX - startX)));
     };
-    el.addEventListener('pointerdown', onDown);
-    return () => el.removeEventListener('pointerdown', onDown);
-  }, []);
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
 
   const sel = daily[selectedDay];
   const today = daily[0];
@@ -211,14 +195,23 @@ export default function HomeForecastPanel() {
           exit={{ opacity: 0, x: -16 }}
           transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
           className="fixed left-4 top-20 z-30"
-          style={{ width, cursor: 'grab' }}
+          style={{ width }}
           drag
+          dragListener={false}
+          dragControls={dragControls}
           dragMomentum={false}
           dragElastic={0.05}
           dragConstraints={{ left: -16, top: -80, right: 1100, bottom: 700 }}
-          whileDrag={{ scale: 1.02, cursor: 'grabbing' }}
+          whileDrag={{ scale: 1.02 }}
         >
-          <div className="glass rounded-2xl overflow-hidden relative">
+          <div
+            className="glass rounded-2xl overflow-hidden relative"
+            style={{ touchAction: 'none', cursor: 'grab' }}
+            onPointerDown={(e) => {
+              if ((e.target as HTMLElement).closest('[data-resize]')) return;
+              dragControls.start(e);
+            }}
+          >
             {/* Weather scene */}
             {todayCond && !loading && (
               <WeatherScene
@@ -292,9 +285,10 @@ export default function HomeForecastPanel() {
               )}
             </div>
 
-            {/* Resize handle — listener attached natively via resizeHandleRef */}
+            {/* Resize handle */}
             <div
-              ref={resizeHandleRef}
+              data-resize="true"
+              onPointerDown={startResize}
               className="absolute bottom-0 right-0 w-5 h-5 flex items-end justify-end pb-1 pr-1 opacity-0 hover:opacity-100 transition-opacity"
               style={{ cursor: 'se-resize' }}
               title="Drag to resize"
