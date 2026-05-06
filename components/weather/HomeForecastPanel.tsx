@@ -159,7 +159,7 @@ function WeatherScene({ effect, temp, label }: { effect: WeatherEffect; temp: nu
 /* ── Main panel ──────────────────────────────────────────── */
 export default function HomeForecastPanel() {
   const { location } = useLocation();
-  const { daily, selectedDay, setSelectedDay, loading } = useWeather();
+  const { weather, daily, selectedDay, setSelectedDay, loading } = useWeather();
   const [width, setWidth] = useState(320);
   const widthRef = useRef(320);
   const dragControls = useDragControls();
@@ -213,10 +213,10 @@ export default function HomeForecastPanel() {
             }}
           >
             {/* Weather scene */}
-            {todayCond && !loading && (
+            {todayCond && !loading && weather && (
               <WeatherScene
                 effect={todayCond.effect}
-                temp={today.tempMax}
+                temp={Math.round(weather.current.temperature_2m)}
                 label={todayCond.label}
               />
             )}
