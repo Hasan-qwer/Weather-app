@@ -6,12 +6,11 @@ import bcrypt from 'bcryptjs';
 import { db } from './db';
 import { authConfig } from './auth.config';
 
-const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
 const isProd = process.env.NODE_ENV === 'production';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  secret,
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   adapter: PrismaAdapter(db),
   session: { strategy: 'jwt' },
   trustHost: true,
