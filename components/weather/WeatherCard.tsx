@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { useMemo, useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Droplets, Wind, MapPin, Star } from 'lucide-react';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -76,29 +76,35 @@ export default function WeatherCard() {
   const { location } = useLocation();
   const { weather, daily, selectedDay, loading, error } = useWeather();
   const [width, setWidth] = useState(320);
-  const resizing = useRef(false);
-  const startX = useRef(0);
-  const startW = useRef(320);
+  const widthRef = useRef(320);
+  const resizeHandleRef = useRef<HTMLDivElement>(null);
 
-  const onResizeStart = useCallback((e: React.PointerEvent) => {
-    e.stopPropagation();
-    e.nativeEvent.stopImmediatePropagation();
-    e.preventDefault();
-    resizing.current = true;
-    startX.current = e.clientX;
-    startW.current = width;
-    const onMove = (ev: PointerEvent) => {
-      if (!resizing.current) return;
-      setWidth(Math.min(520, Math.max(260, startW.current + ev.clientX - startX.current)));
+  useEffect(() => { widthRef.current = width; }, [width]);
+
+  useEffect(() => {
+    const el = resizeHandleRef.current;
+    if (!el) return;
+    const onDown = (e: PointerEvent) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const startX = e.clientX;
+      const startW = widthRef.current;
+      let active = true;
+      const onMove = (ev: PointerEvent) => {
+        if (!active) return;
+        setWidth(Math.min(520, Math.max(260, startW + ev.clientX - startX)));
+      };
+      const onUp = () => {
+        active = false;
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
     };
-    const onUp = () => {
-      resizing.current = false;
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  }, [width]);
+    el.addEventListener('pointerdown', onDown);
+    return () => el.removeEventListener('pointerdown', onDown);
+  }, []);
 
   const currentCondition = useMemo(() => {
     if (!weather) return null;
@@ -269,9 +275,9 @@ export default function WeatherCard() {
             </AnimatePresence>
           </>
         )}
-          {/* Resize handle */}
+          {/* Resize handle — listener attached natively via resizeHandleRef */}
           <div
-            onPointerDown={onResizeStart}
+            ref={resizeHandleRef}
             className="absolute bottom-0 right-0 w-5 h-5 flex items-end justify-end pb-1 pr-1 opacity-0 hover:opacity-100 transition-opacity"
             style={{ cursor: 'se-resize' }}
             title="Drag to resize"

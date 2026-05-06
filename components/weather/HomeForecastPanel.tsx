@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin } from 'lucide-react';
 import { useWeather } from '@/lib/weatherContext';
@@ -161,32 +161,41 @@ export default function HomeForecastPanel() {
   const { location } = useLocation();
   const { daily, selectedDay, setSelectedDay, loading } = useWeather();
   const [width, setWidth] = useState(320);
-  const resizing = useRef(false);
-  const startX = useRef(0);
-  const startW = useRef(320);
+  const widthRef = useRef(320);
+  const resizeHandleRef = useRef<HTMLDivElement>(null);
 
-  const onResizeStart = useCallback((e: React.PointerEvent) => {
-    // Stop both the React synthetic event AND the underlying native event so
-    // Framer Motion's pointerdown drag listener never fires.
-    e.stopPropagation();
-    e.nativeEvent.stopImmediatePropagation();
-    e.preventDefault();
-    resizing.current = true;
-    startX.current = e.clientX;
-    startW.current = width;
-    const onMove = (ev: PointerEvent) => {
-      if (!resizing.current) return;
-      const next = Math.min(480, Math.max(240, startW.current + ev.clientX - startX.current));
-      setWidth(next);
+  // Keep widthRef in sync so the native listener always sees the latest value.
+  useEffect(() => { widthRef.current = width; }, [width]);
+
+  // Attach a native pointerdown listener directly to the resize handle.
+  // React synthetic events (onPointerDown) run from the root and fire AFTER
+  // Framer Motion's native bubble listener on the draggable parent — so they
+  // can't stop it. A listener added here fires at the element level, before
+  // the event bubbles to Framer Motion.
+  useEffect(() => {
+    const el = resizeHandleRef.current;
+    if (!el) return;
+    const onDown = (e: PointerEvent) => {
+      e.stopPropagation(); // Prevents bubble to Framer Motion on motion.aside
+      e.preventDefault();
+      const startX = e.clientX;
+      const startW = widthRef.current;
+      let active = true;
+      const onMove = (ev: PointerEvent) => {
+        if (!active) return;
+        setWidth(Math.min(480, Math.max(240, startW + ev.clientX - startX)));
+      };
+      const onUp = () => {
+        active = false;
+        window.removeEventListener('pointermove', onMove);
+        window.removeEventListener('pointerup', onUp);
+      };
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
     };
-    const onUp = () => {
-      resizing.current = false;
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
-  }, [width]);
+    el.addEventListener('pointerdown', onDown);
+    return () => el.removeEventListener('pointerdown', onDown);
+  }, []);
 
   const sel = daily[selectedDay];
   const today = daily[0];
@@ -283,9 +292,9 @@ export default function HomeForecastPanel() {
               )}
             </div>
 
-            {/* Resize handle */}
+            {/* Resize handle — listener attached natively via resizeHandleRef */}
             <div
-              onPointerDown={onResizeStart}
+              ref={resizeHandleRef}
               className="absolute bottom-0 right-0 w-5 h-5 flex items-end justify-end pb-1 pr-1 opacity-0 hover:opacity-100 transition-opacity"
               style={{ cursor: 'se-resize' }}
               title="Drag to resize"
