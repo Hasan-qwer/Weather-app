@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { AlertCircle, Globe } from 'lucide-react';
@@ -16,11 +17,29 @@ const MESSAGES: Record<string, string> = {
   Default: 'Something went wrong. Please try again.',
 };
 
-export default function AuthErrorPage() {
+function ErrorContent() {
   const params = useSearchParams();
   const code = params.get('error') ?? 'Default';
   const message = MESSAGES[code] ?? MESSAGES.Default;
 
+  return (
+    <div className="glass rounded-2xl p-6 text-center">
+      <div className="mb-4 flex justify-center">
+        <AlertCircle className="h-10 w-10 text-red-400" />
+      </div>
+      <h1 className="mb-2 text-lg font-semibold text-white">Sign-in failed</h1>
+      <p className="mb-6 text-sm text-slate-400">{message}</p>
+      <Link
+        href="/login"
+        className="inline-block w-full rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-500/20 transition-all hover:from-blue-400 hover:to-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      >
+        Try again
+      </Link>
+    </div>
+  );
+}
+
+export default function AuthErrorPage() {
   return (
     <div>
       <div className="mb-8 text-center">
@@ -32,19 +51,21 @@ export default function AuthErrorPage() {
         </div>
       </div>
 
-      <div className="glass rounded-2xl p-6 text-center">
-        <div className="mb-4 flex justify-center">
-          <AlertCircle className="h-10 w-10 text-red-400" />
+      <Suspense fallback={
+        <div className="glass rounded-2xl p-6 text-center">
+          <AlertCircle className="mx-auto mb-4 h-10 w-10 text-red-400" />
+          <h1 className="mb-2 text-lg font-semibold text-white">Sign-in failed</h1>
+          <p className="mb-6 text-sm text-slate-400">Something went wrong. Please try again.</p>
+          <Link
+            href="/login"
+            className="inline-block w-full rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 py-2.5 text-sm font-medium text-white"
+          >
+            Try again
+          </Link>
         </div>
-        <h1 className="mb-2 text-lg font-semibold text-white">Sign-in failed</h1>
-        <p className="mb-6 text-sm text-slate-400">{message}</p>
-        <Link
-          href="/login"
-          className="inline-block w-full rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 py-2.5 text-sm font-medium text-white shadow-lg shadow-blue-500/20 transition-all hover:from-blue-400 hover:to-blue-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-        >
-          Try again
-        </Link>
-      </div>
+      }>
+        <ErrorContent />
+      </Suspense>
 
       <p className="mt-4 text-center">
         <Link href="/" className="text-xs text-slate-600 transition-colors hover:text-slate-400">
