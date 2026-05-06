@@ -1,16 +1,40 @@
 import NextAuth from 'next-auth';
-import Google from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { db } from './db';
 import { authConfig } from './auth.config';
 
-const isProd = process.env.NODE_ENV === 'production';
+// Use a plain object so `checks` reaches normalizeOAuth directly (Google()
+// factory nests options one level deep, preventing the override).
+const GoogleProvider = {
+  id: 'google',
+  name: 'Google',
+  type: 'oidc' as const,
+  issuer: 'https://accounts.google.com',
+  clientId: process.env.GOOGLE_CLIENT_ID!,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+  // Use state-only: no PKCE cookie to decode, no secret-mismatch risk.
+  checks: ['state'] as ['state'],
+  authorization: {
+    params: {
+      prompt: 'consent',
+      access_type: 'offline',
+      response_type: 'code',
+    },
+  },
+  profile(profile: Record<string, string>) {
+    return {
+      id: profile.sub,
+      name: profile.name,
+      email: profile.email,
+      image: profile.picture,
+    };
+  },
+};
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
   adapter: PrismaAdapter(db),
   session: { strategy: 'jwt' },
   trustHost: true,
@@ -18,38 +42,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: (e) => console.error('[AUTH ERROR]', e),
     warn: (code) => console.warn('[AUTH WARN]', code),
   },
+  // State cookie must survive the cross-origin redirect from Google → Vercel.
   cookies: {
-    pkceCodeVerifier: {
-      name: 'authjs.pkce.code_verifier',
-      options: {
-        httpOnly: true,
-        sameSite: isProd ? ('none' as const) : ('lax' as const),
-        path: '/',
-        secure: isProd,
-      },
-    },
     state: {
       name: 'authjs.state',
       options: {
         httpOnly: true,
-        sameSite: isProd ? ('none' as const) : ('lax' as const),
+        sameSite: 'none' as const,
         path: '/',
-        secure: isProd,
+        secure: true,
       },
     },
   },
   providers: [
-    Google({
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      authorization: {
-        params: {
-          prompt: 'consent',
-          access_type: 'offline',
-          response_type: 'code',
-        },
-      },
-    }),
+    GoogleProvider,
     Credentials({
       async authorize(credentials) {
         const email = credentials?.email as string | undefined;
