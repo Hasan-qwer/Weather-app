@@ -1,5 +1,5 @@
-import { signIn } from '@/lib/auth';
+import { redirect } from 'next/navigation';
 
-export default async function GoogleSignInPage() {
-  await signIn('google', { redirectTo: '/dashboard' });
+export default function GoogleSignInPage() {
+  redirect('/api/auth/signin/google');
 }
