@@ -23,6 +23,34 @@ export interface WeatherData {
   timezone_abbreviation: string;
 }
 
+export interface DailyForecast {
+  date: string;
+  weatherCode: number;
+  tempMax: number;
+  tempMin: number;
+  precipSum: number;
+}
+
+export async function fetchDailyForecast(lat: number, lng: number): Promise<DailyForecast[]> {
+  const params = new URLSearchParams({
+    latitude: lat.toString(),
+    longitude: lng.toString(),
+    daily: ['weather_code', 'temperature_2m_max', 'temperature_2m_min', 'precipitation_sum'].join(','),
+    timezone: 'auto',
+    forecast_days: '7',
+  });
+  const res = await fetch(`${OPEN_METEO_BASE}/forecast?${params}`);
+  if (!res.ok) throw new Error('Failed to fetch daily forecast');
+  const data = await res.json();
+  return (data.daily.time as string[]).map((date, i) => ({
+    date,
+    weatherCode: data.daily.weather_code[i] as number,
+    tempMax: Math.round(data.daily.temperature_2m_max[i] as number),
+    tempMin: Math.round(data.daily.temperature_2m_min[i] as number),
+    precipSum: Math.round((data.daily.precipitation_sum[i] as number) * 10) / 10,
+  }));
+}
+
 export async function fetchWeather(lat: number, lng: number): Promise<WeatherData> {
   const params = new URLSearchParams({
     latitude: lat.toString(),

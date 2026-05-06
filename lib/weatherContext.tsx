@@ -2,10 +2,13 @@
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
 import { useLocation } from '@/lib/locationContext';
-import { fetchWeather, type WeatherData } from '@/lib/openMeteo';
+import { fetchWeather, fetchDailyForecast, type WeatherData, type DailyForecast } from '@/lib/openMeteo';
 
 interface WeatherContextValue {
   weather: WeatherData | null;
+  daily: DailyForecast[];
+  selectedDay: number;
+  setSelectedDay: (day: number) => void;
   loading: boolean;
   error: string | null;
 }
@@ -15,6 +18,8 @@ const WeatherContext = createContext<WeatherContextValue | null>(null);
 export function WeatherProvider({ children }: { children: ReactNode }) {
   const { location } = useLocation();
   const [weather, setWeather] = useState<WeatherData | null>(null);
+  const [daily, setDaily] = useState<DailyForecast[]>([]);
+  const [selectedDay, setSelectedDay] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,10 +28,16 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetchWeather(location.latitude, location.longitude)
-      .then((data) => {
+    setSelectedDay(0);
+
+    Promise.all([
+      fetchWeather(location.latitude, location.longitude),
+      fetchDailyForecast(location.latitude, location.longitude),
+    ])
+      .then(([weatherData, dailyData]) => {
         if (!cancelled) {
-          setWeather(data);
+          setWeather(weatherData);
+          setDaily(dailyData);
           setLoading(false);
         }
       })
@@ -36,13 +47,12 @@ export function WeatherProvider({ children }: { children: ReactNode }) {
           setLoading(false);
         }
       });
-    return () => {
-      cancelled = true;
-    };
+
+    return () => { cancelled = true; };
   }, [location?.latitude, location?.longitude]);
 
   return (
-    <WeatherContext.Provider value={{ weather, loading, error }}>
+    <WeatherContext.Provider value={{ weather, daily, selectedDay, setSelectedDay, loading, error }}>
       {children}
     </WeatherContext.Provider>
   );

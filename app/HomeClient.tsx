@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { User, Globe } from 'lucide-react';
+import { User, Globe, LayoutDashboard } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import { LocationProvider, useLocation } from '@/lib/locationContext';
 import { WeatherProvider } from '@/lib/weatherContext';
@@ -14,11 +15,12 @@ import CityBar from '@/components/search/CityBar';
 import WeatherCard from '@/components/weather/WeatherCard';
 import LiveClock from '@/components/weather/LiveClock';
 import WeatherEffects from '@/components/weather/WeatherEffects';
+import HomeForecastPanel from '@/components/weather/HomeForecastPanel';
 import { ErrorBoundary } from '@/components/ui/error-boundary';
 
 function MapFallback() {
   return (
-    <div className="fixed inset-0 -z-10 flex items-center justify-center bg-[#080c14]">
+    <div className="fixed inset-0 flex items-center justify-center bg-[#080c14]" style={{ zIndex: 0 }}>
       <p className="text-sm text-slate-600">Map failed to load — check your network connection.</p>
     </div>
   );
@@ -30,10 +32,10 @@ function AuthNav() {
     return (
       <Link
         href="/dashboard"
-        className="flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 backdrop-blur transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+        className="flex items-center gap-2 rounded-xl border border-blue-400/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-200 shadow-lg shadow-blue-900/20 backdrop-blur transition-all hover:bg-blue-500/35 hover:text-white hover:border-blue-300/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
         aria-label="Go to dashboard"
       >
-        <User className="h-4 w-4" aria-hidden="true" />
+        <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
         <span className="hidden sm:inline">Dashboard</span>
       </Link>
     );
@@ -41,7 +43,7 @@ function AuthNav() {
   return (
     <Link
       href="/login"
-      className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-300 backdrop-blur transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      className="flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-2 text-sm font-semibold text-white shadow-lg backdrop-blur transition-all hover:bg-white/20 hover:border-white/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400"
     >
       Sign in
     </Link>
@@ -50,10 +52,10 @@ function AuthNav() {
 
 function MainContent() {
   const [countryFilter, setCountryFilter] = useState<CountryFilter | null>(null);
-  const { setLocation } = useLocation();
+  const { setLocation, location } = useLocation();
   const searchParams = useSearchParams();
+  const hasLocation = !!location;
 
-  // Fly to a favourite when navigated from the dashboard
   useEffect(() => {
     const lat = searchParams.get('lat');
     const lng = searchParams.get('lng');
@@ -61,7 +63,6 @@ function MainContent() {
     const country = searchParams.get('country');
     const tz = searchParams.get('tz');
     const id = searchParams.get('id');
-
     if (lat && lng && name && tz) {
       setLocation({
         id: id ?? `${lat},${lng}`,
@@ -82,52 +83,95 @@ function MainContent() {
         <GlobeMap />
       </ErrorBoundary>
 
-      <WeatherEffects />
+      {/* ── Split-screen overlays (desktop only) ─────────────── */}
+      <AnimatePresence>
+        {hasLocation && (
+          <>
+            {/* Left half — dark panel with weather effects */}
+            <motion.div
+              key="split-left"
+              className="pointer-events-none fixed inset-y-0 left-0 z-[5] hidden w-1/2 overflow-hidden sm:block"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
+              style={{ background: 'linear-gradient(to right, rgba(8,12,20,0.88) 0%, rgba(8,12,20,0.68) 100%)' }}
+            >
+              <WeatherEffects contained />
+            </motion.div>
 
-      {/* ── Top bar ─────────────────────────────────────────── */}
-      <header className="absolute inset-x-0 top-0 z-20 p-3 sm:p-5">
-        {/*
-          Mobile  : row-1 = Logo + Auth, row-2 = Search bars
-          Desktop : single row = Logo + Search bars + Clock + Auth
-        */}
+            {/* Right half — clear map, no blur, no dark overlay */}
+            <motion.div
+              key="split-right"
+              className="pointer-events-none fixed inset-y-0 right-0 z-[5] hidden w-1/2 sm:block"
+              initial={{ x: '100%', opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: '100%', opacity: 0 }}
+              transition={{ duration: 0.55, ease: [0.4, 0, 0.2, 1] }}
+            />
+          </>
+        )}
+      </AnimatePresence>
 
-        {/* Mobile row 1 */}
-        <div className="mb-2 flex items-center justify-between sm:hidden">
-          <span className="select-none text-lg font-bold tracking-tight text-white">
-            Live<span className="text-blue-400">Atlas</span>
-          </span>
-          <AuthNav />
+      {/* Mobile weather effects */}
+      <div className="sm:hidden">
+        <WeatherEffects />
+      </div>
+
+      {/* ── Header ──────────────────────────────────────────── */}
+      <header className="absolute inset-x-0 top-0 z-30 px-4 py-3 sm:px-6 sm:py-4">
+        {/* Glassmorphic header background */}
+        <div className="absolute inset-0 border-b border-white/10 bg-[#080c14]/60 backdrop-blur-md" />
+
+        {/* Mobile layout */}
+        <div className="relative flex flex-col gap-2 sm:hidden">
+          <div className="flex items-center justify-between">
+            <span className="select-none text-xl font-black tracking-tight text-white drop-shadow">
+              Live<span className="text-blue-400">Atlas</span>
+            </span>
+            <AuthNav />
+          </div>
+          <div className="flex gap-2">
+            <CountryBar value={countryFilter} onChange={setCountryFilter} />
+            <CityBar countryFilter={countryFilter} />
+          </div>
         </div>
 
-        {/* Mobile row 2 */}
-        <div className="flex gap-2 sm:hidden">
-          <CountryBar value={countryFilter} onChange={setCountryFilter} />
-          <CityBar countryFilter={countryFilter} />
-        </div>
+        {/* Desktop layout */}
+        <div className="relative hidden sm:flex sm:items-center sm:gap-4">
+          {/* Logo */}
+          <div className="flex shrink-0 items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/20 ring-1 ring-blue-400/30">
+              <Globe className="h-4 w-4 text-blue-400" aria-hidden="true" />
+            </div>
+            <span className="select-none text-xl font-black tracking-tight text-white drop-shadow">
+              Live<span className="text-blue-400">Atlas</span>
+            </span>
+          </div>
 
-        {/* Desktop single row */}
-        <div className="hidden sm:flex sm:items-center sm:gap-3">
-          <span className="shrink-0 select-none text-lg font-bold tracking-tight text-white">
-            <Globe className="mr-1 inline h-4 w-4 text-blue-400" aria-hidden="true" />
-            Live<span className="text-blue-400">Atlas</span>
-          </span>
+          {/* Divider */}
+          <div className="h-6 w-px bg-white/15" />
 
+          {/* Search bars */}
           <div className="flex min-w-0 flex-1 gap-2">
             <CountryBar value={countryFilter} onChange={setCountryFilter} />
             <CityBar countryFilter={countryFilter} />
           </div>
 
-          <LiveClock />
-          <AuthNav />
+          {/* Right side controls */}
+          <div className="flex shrink-0 items-center gap-3">
+            <LiveClock />
+            <div className="h-6 w-px bg-white/15" />
+            <AuthNav />
+          </div>
         </div>
       </header>
 
-      {/* ── Weather card ─────────────────────────────────────── */}
-      {/*
-        Mobile  : full-width strip pinned to bottom (bottom-sheet style)
-        Desktop : 320px card, bottom-left
-      */}
-      <aside className="absolute bottom-0 left-0 right-0 z-20 sm:bottom-6 sm:left-6 sm:right-auto">
+      {/* ── 7-day forecast panel — top left ─────────────────── */}
+      <HomeForecastPanel />
+
+      {/* ── Weather card — bottom left ───────────────────────── */}
+      <aside className="absolute bottom-0 left-0 right-0 z-30 sm:bottom-6 sm:left-6 sm:right-auto">
         <WeatherCard />
       </aside>
     </main>

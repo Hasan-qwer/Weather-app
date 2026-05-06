@@ -98,7 +98,7 @@ export default function CityBar({ countryFilter }: CityBarProps) {
 
       <div className="relative">
         <MapPin
-          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-blue-400"
           aria-hidden="true"
         />
         <input
@@ -110,7 +110,7 @@ export default function CityBar({ countryFilter }: CityBarProps) {
           aria-autocomplete="list"
           aria-activedescendant={activeIdx >= 0 ? `${listId}-opt-${activeIdx}` : undefined}
           aria-busy={loading}
-          className="w-full rounded-xl border border-white/10 bg-white/5 py-2.5 pl-9 pr-4 text-sm text-white placeholder-slate-500 backdrop-blur transition-colors focus:border-blue-500/50 focus:bg-white/10 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="w-full rounded-xl border border-white/30 bg-black/50 py-2.5 pl-9 pr-4 text-sm text-white placeholder-slate-300 backdrop-blur transition-colors focus:border-blue-400/70 focus:bg-black/60 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
           placeholder={placeholder}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
