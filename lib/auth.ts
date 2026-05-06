@@ -15,6 +15,26 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: (e) => console.error('[AUTH ERROR]', e),
     warn: (code) => console.warn('[AUTH WARN]', code),
   },
+  cookies: {
+    pkceCodeVerifier: {
+      name: 'authjs.pkce.code_verifier',
+      options: {
+        httpOnly: true,
+        sameSite: 'none' as const,
+        path: '/',
+        secure: true,
+      },
+    },
+    state: {
+      name: 'authjs.state',
+      options: {
+        httpOnly: true,
+        sameSite: 'none' as const,
+        path: '/',
+        secure: true,
+      },
+    },
+  },
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
