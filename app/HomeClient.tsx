@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { User, Globe, LayoutDashboard } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import { LocationProvider, useLocation } from '@/lib/locationContext';
 import { WeatherProvider } from '@/lib/weatherContext';
@@ -83,37 +83,7 @@ function MainContent() {
         <GlobeMap />
       </ErrorBoundary>
 
-      {/* ── Split-screen overlays (desktop only) ─────────────── */}
-      <AnimatePresence>
-        {hasLocation && (
-          <>
-            {/* Left half — dark panel with weather effects */}
-            <motion.div
-              key="split-left"
-              className="pointer-events-none fixed inset-y-0 left-0 z-[5] hidden w-1/2 overflow-hidden sm:block"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6, ease: [0.4, 0, 0.2, 1] }}
-              style={{ background: 'linear-gradient(to right, rgba(8,12,20,0.88) 0%, rgba(8,12,20,0.68) 100%)' }}
-            >
-              <WeatherEffects contained />
-            </motion.div>
-
-            {/* Right half — clear map, no blur, no dark overlay */}
-            <motion.div
-              key="split-right"
-              className="pointer-events-none fixed inset-y-0 right-0 z-[5] hidden w-1/2 sm:block"
-              initial={{ x: '100%', opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: '100%', opacity: 0 }}
-              transition={{ duration: 0.55, ease: [0.4, 0, 0.2, 1] }}
-            />
-          </>
-        )}
-      </AnimatePresence>
-
-      {/* Mobile weather effects */}
+      {/* Mobile weather effects only */}
       <div className="sm:hidden">
         <WeatherEffects />
       </div>
