@@ -7,8 +7,11 @@ export const runtime = 'nodejs';
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL ?? '';
 const SECRET = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET ?? '';
-// Auth.js v5 uses this cookie name on HTTPS (Secure prefix required).
-const SESSION_COOKIE = '__Secure-authjs.session-token';
+// Auth.js v5 prefixes the session cookie with __Secure- on HTTPS (production).
+const SESSION_COOKIE =
+  process.env.NODE_ENV === 'production'
+    ? '__Secure-authjs.session-token'
+    : 'authjs.session-token';
 
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
