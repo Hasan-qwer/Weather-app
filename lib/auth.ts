@@ -1,32 +1,17 @@
 import NextAuth from 'next-auth';
+import Google from 'next-auth/providers/google';
 import { PrismaAdapter } from '@auth/prisma-adapter';
 import Credentials from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
 import { db } from './db';
 import { authConfig } from './auth.config';
 
-// Plain object config bypasses the Google() factory wrapper so `checks`
-// reaches normalizeOAuth directly — this disables PKCE and uses state only.
-const GoogleProvider = {
-  id: 'google',
-  name: 'Google',
-  type: 'oidc' as const,
-  issuer: 'https://accounts.google.com',
-  clientId: process.env.GOOGLE_CLIENT_ID!,
-  clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-  checks: ['state'] as ['state'],
-  profile(profile: Record<string, string>) {
-    return {
-      id: profile.sub,
-      name: profile.name,
-      email: profile.email,
-      image: profile.picture,
-    };
-  },
-};
+const secret = process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET;
+const isProd = process.env.NODE_ENV === 'production';
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  secret,
   adapter: PrismaAdapter(db),
   session: { strategy: 'jwt' },
   trustHost: true,
@@ -35,18 +20,37 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     warn: (code) => console.warn('[AUTH WARN]', code),
   },
   cookies: {
+    pkceCodeVerifier: {
+      name: 'authjs.pkce.code_verifier',
+      options: {
+        httpOnly: true,
+        sameSite: isProd ? ('none' as const) : ('lax' as const),
+        path: '/',
+        secure: isProd,
+      },
+    },
     state: {
       name: 'authjs.state',
       options: {
         httpOnly: true,
-        sameSite: 'none' as const,
+        sameSite: isProd ? ('none' as const) : ('lax' as const),
         path: '/',
-        secure: true,
+        secure: isProd,
       },
     },
   },
   providers: [
-    GoogleProvider,
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          prompt: 'consent',
+          access_type: 'offline',
+          response_type: 'code',
+        },
+      },
+    }),
     Credentials({
       async authorize(credentials) {
         const email = credentials?.email as string | undefined;

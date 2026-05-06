@@ -140,10 +140,8 @@ function MainContent() {
       {/* ── 7-day forecast panel — top left ─────────────────── */}
       <HomeForecastPanel />
 
-      {/* ── Weather card — bottom left ───────────────────────── */}
-      <aside className="absolute bottom-0 left-0 right-0 z-30 sm:bottom-6 sm:left-6 sm:right-auto">
-        <WeatherCard />
-      </aside>
+      {/* ── Weather card — bottom left (self-positioned, draggable) ── */}
+      <WeatherCard />
     </main>
   );
 }

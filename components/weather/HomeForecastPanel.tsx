@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin } from 'lucide-react';
 import { useWeather } from '@/lib/weatherContext';
@@ -159,6 +160,30 @@ function WeatherScene({ effect, temp, label }: { effect: WeatherEffect; temp: nu
 export default function HomeForecastPanel() {
   const { location } = useLocation();
   const { daily, selectedDay, setSelectedDay, loading } = useWeather();
+  const [width, setWidth] = useState(320);
+  const resizing = useRef(false);
+  const startX = useRef(0);
+  const startW = useRef(320);
+
+  const onResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizing.current = true;
+    startX.current = e.clientX;
+    startW.current = width;
+    const onMove = (ev: MouseEvent) => {
+      if (!resizing.current) return;
+      const next = Math.min(480, Math.max(240, startW.current + ev.clientX - startX.current));
+      setWidth(next);
+    };
+    const onUp = () => {
+      resizing.current = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [width]);
 
   const sel = daily[selectedDay];
   const today = daily[0];
@@ -173,9 +198,15 @@ export default function HomeForecastPanel() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -16 }}
           transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
-          className="fixed left-4 top-20 z-30 w-80"
+          className="fixed left-4 top-20 z-30"
+          style={{ width, cursor: 'grab' }}
+          drag
+          dragMomentum={false}
+          dragElastic={0.05}
+          dragConstraints={{ left: -16, top: -80, right: 1100, bottom: 700 }}
+          whileDrag={{ scale: 1.02, cursor: 'grabbing' }}
         >
-          <div className="glass rounded-2xl overflow-hidden">
+          <div className="glass rounded-2xl overflow-hidden relative">
             {/* Weather scene */}
             {todayCond && !loading && (
               <WeatherScene
@@ -247,6 +278,18 @@ export default function HomeForecastPanel() {
                   )}
                 </>
               )}
+            </div>
+
+            {/* Resize handle */}
+            <div
+              onMouseDown={onResizeStart}
+              className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize flex items-end justify-end pb-1 pr-1 opacity-0 hover:opacity-100 transition-opacity"
+              style={{ cursor: 'se-resize' }}
+              title="Drag to resize"
+            >
+              <svg width="10" height="10" viewBox="0 0 10 10" className="text-white/30">
+                <path d="M0 10 L10 0 L10 10 Z" fill="currentColor" />
+              </svg>
             </div>
           </div>
         </motion.aside>

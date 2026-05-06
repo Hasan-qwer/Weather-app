@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Droplets, Wind, MapPin, Star } from 'lucide-react';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -75,6 +75,29 @@ function SaveButton({ location }: { location: LocationData }) {
 export default function WeatherCard() {
   const { location } = useLocation();
   const { weather, daily, selectedDay, loading, error } = useWeather();
+  const [width, setWidth] = useState(320);
+  const resizing = useRef(false);
+  const startX = useRef(0);
+  const startW = useRef(320);
+
+  const onResizeStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizing.current = true;
+    startX.current = e.clientX;
+    startW.current = width;
+    const onMove = (ev: MouseEvent) => {
+      if (!resizing.current) return;
+      setWidth(Math.min(520, Math.max(260, startW.current + ev.clientX - startX.current)));
+    };
+    const onUp = () => {
+      resizing.current = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, [width]);
 
   const currentCondition = useMemo(() => {
     if (!weather) return null;
@@ -100,12 +123,22 @@ export default function WeatherCard() {
 
   return (
     <AnimatePresence mode="wait">
-      <motion.div key={location.id}
-        initial={{ opacity: 0, y: 16, scale: 0.97 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 16, scale: 0.97 }}
+      <motion.div
+        key={location.id + '-wrapper'}
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 16 }}
         transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-        className="glass w-full rounded-none rounded-t-2xl p-5 text-white shadow-2xl shadow-black/50 sm:w-80 sm:rounded-2xl"
+        className="fixed bottom-6 left-6 z-30"
+        style={{ width, cursor: 'grab' }}
+        drag
+        dragMomentum={false}
+        dragElastic={0.05}
+        dragConstraints={{ left: -24, top: -800, right: 1100, bottom: 24 }}
+        whileDrag={{ scale: 1.02, cursor: 'grabbing' }}
+      >
+      <div
+        className="glass rounded-2xl p-5 text-white shadow-2xl shadow-black/50 relative"
         role="region" aria-label={`Weather for ${location.name}`}>
 
         {/* Location header */}
@@ -235,6 +268,18 @@ export default function WeatherCard() {
             </AnimatePresence>
           </>
         )}
+          {/* Resize handle */}
+          <div
+            onMouseDown={onResizeStart}
+            className="absolute bottom-0 right-0 w-5 h-5 flex items-end justify-end pb-1 pr-1 opacity-0 hover:opacity-100 transition-opacity"
+            style={{ cursor: 'se-resize' }}
+            title="Drag to resize"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" className="text-white/30">
+              <path d="M0 10 L10 0 L10 10 Z" fill="currentColor" />
+            </svg>
+          </div>
+        </div>
       </motion.div>
     </AnimatePresence>
   );

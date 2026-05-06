@@ -65,9 +65,14 @@ export default function LoginPage() {
     }
   };
 
-  const handleGoogle = () => {
+  const handleGoogle = async () => {
     setGoogleLoading(true);
-    window.location.href = '/login/google';
+    try {
+      await signIn('google', { callbackUrl: '/dashboard', redirect: true });
+    } catch {
+      setGoogleLoading(false);
+      toast.error('Could not start Google sign-in. Please try again.');
+    }
   };
 
   const fieldClass =
