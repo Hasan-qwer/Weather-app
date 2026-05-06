@@ -39,6 +39,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: 'jwt' },
   trustHost: true,
   logger: {
+    debug: (msg, meta) => console.log('[AUTH DEBUG]', msg, JSON.stringify(meta ?? '')),
     error: (e) => console.error('[AUTH ERROR]', e),
     warn: (code) => console.warn('[AUTH WARN]', code),
   },
