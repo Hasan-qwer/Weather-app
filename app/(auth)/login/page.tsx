@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
+import { googleSignIn } from './actions';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -67,7 +68,7 @@ export default function LoginPage() {
 
   const handleGoogle = async () => {
     setGoogleLoading(true);
-    await signIn('google', { callbackUrl: '/dashboard' });
+    await googleSignIn();
   };
 
   const fieldClass =
