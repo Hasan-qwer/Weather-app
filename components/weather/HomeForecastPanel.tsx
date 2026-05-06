@@ -165,24 +165,27 @@ export default function HomeForecastPanel() {
   const startX = useRef(0);
   const startW = useRef(320);
 
-  const onResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
+  const onResizeStart = useCallback((e: React.PointerEvent) => {
+    // Stop both the React synthetic event AND the underlying native event so
+    // Framer Motion's pointerdown drag listener never fires.
     e.stopPropagation();
+    e.nativeEvent.stopImmediatePropagation();
+    e.preventDefault();
     resizing.current = true;
     startX.current = e.clientX;
     startW.current = width;
-    const onMove = (ev: MouseEvent) => {
+    const onMove = (ev: PointerEvent) => {
       if (!resizing.current) return;
       const next = Math.min(480, Math.max(240, startW.current + ev.clientX - startX.current));
       setWidth(next);
     };
     const onUp = () => {
       resizing.current = false;
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
     };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
   }, [width]);
 
   const sel = daily[selectedDay];
@@ -282,8 +285,8 @@ export default function HomeForecastPanel() {
 
             {/* Resize handle */}
             <div
-              onMouseDown={onResizeStart}
-              className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize flex items-end justify-end pb-1 pr-1 opacity-0 hover:opacity-100 transition-opacity"
+              onPointerDown={onResizeStart}
+              className="absolute bottom-0 right-0 w-5 h-5 flex items-end justify-end pb-1 pr-1 opacity-0 hover:opacity-100 transition-opacity"
               style={{ cursor: 'se-resize' }}
               title="Drag to resize"
             >
