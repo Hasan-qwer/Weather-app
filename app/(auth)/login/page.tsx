@@ -67,19 +67,8 @@ export default function LoginPage() {
 
   const handleGoogle = () => {
     setGoogleLoading(true);
-    // If NEXT_PUBLIC_APP_URL is set and we're on a different domain (e.g. a
-    // Vercel preview URL), redirect to the canonical domain first so that the
-    // PKCE cookie and the OAuth callback land on the same hostname.
-    const canonical = process.env.NEXT_PUBLIC_APP_URL;
-    if (canonical && typeof window !== 'undefined') {
-      const currentHost = window.location.hostname;
-      const canonicalHost = new URL(canonical).hostname;
-      if (currentHost !== canonicalHost) {
-        window.location.href = `${canonical}/login`;
-        return;
-      }
-    }
-    window.location.href = '/api/auth/signin/google';
+    // Custom cookie-free OAuth start — uses HMAC state instead of a PKCE cookie.
+    window.location.href = '/api/auth/google-start';
   };
 
   const fieldClass =
